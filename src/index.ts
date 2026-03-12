@@ -62,10 +62,11 @@ const METABASE_URL = process.env.METABASE_URL;
 const METABASE_USERNAME = process.env.METABASE_USERNAME;
 const METABASE_PASSWORD = process.env.METABASE_PASSWORD;
 const METABASE_API_KEY = process.env.METABASE_API_KEY;
+const METABASE_SESSION_TOKEN = process.env.METABASE_SESSION_TOKEN;
 
-if (!METABASE_URL || (!METABASE_API_KEY && (!METABASE_USERNAME || !METABASE_PASSWORD))) {
+if (!METABASE_URL || (!METABASE_API_KEY && !METABASE_SESSION_TOKEN && (!METABASE_USERNAME || !METABASE_PASSWORD))) {
   throw new Error(
-    "Either (METABASE_URL and METABASE_API_KEY) or (METABASE_URL, METABASE_USERNAME, and METABASE_PASSWORD) environment variables are required"
+    "Either (METABASE_URL and METABASE_API_KEY) or (METABASE_URL and METABASE_SESSION_TOKEN) or (METABASE_URL, METABASE_USERNAME, and METABASE_PASSWORD) environment variables are required"
   );
 }
 
@@ -109,6 +110,10 @@ class MetabaseServer {
       this.logInfo('Using Metabase API Key for authentication.');
       this.axiosInstance.defaults.headers.common['X-API-Key'] = METABASE_API_KEY;
       this.sessionToken = "api_key_used"; // Indicate API key is in use
+    } else if (METABASE_SESSION_TOKEN) {
+      this.logInfo('Using Metabase session token for authentication (e.g. obtained via Google SSO).');
+      this.axiosInstance.defaults.headers.common['X-Metabase-Session'] = METABASE_SESSION_TOKEN;
+      this.sessionToken = METABASE_SESSION_TOKEN;
     } else if (METABASE_USERNAME && METABASE_PASSWORD) {
       this.logInfo('Using Metabase username/password for authentication.');
       // Existing session token logic will apply
@@ -210,7 +215,7 @@ class MetabaseServer {
   private setupResourceHandlers() {
     this.server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
       this.logInfo('Listing resources...', { requestStructure: JSON.stringify(request) });
-      if (!METABASE_API_KEY) {
+      if (!METABASE_API_KEY && !METABASE_SESSION_TOKEN) {
         await this.getSessionToken();
       }
 
@@ -266,7 +271,7 @@ class MetabaseServer {
     // Read resource
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       this.logInfo('Reading resource...', { requestStructure: JSON.stringify(request) });
-      if (!METABASE_API_KEY) {
+      if (!METABASE_API_KEY && !METABASE_SESSION_TOKEN) {
         await this.getSessionToken();
       }
 
@@ -846,7 +851,7 @@ class MetabaseServer {
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       this.logInfo('Calling tool...', { requestStructure: JSON.stringify(request) });
-      if (!METABASE_API_KEY) {
+      if (!METABASE_API_KEY && !METABASE_SESSION_TOKEN) {
         await this.getSessionToken();
       }
 

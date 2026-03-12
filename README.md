@@ -29,18 +29,22 @@ This is a TypeScript-based MCP server that implements integration with Metabase 
 
 ## Configuration
 
-Before running the server, you need to set environment variables for authentication. The server supports two methods:
+Before running the server, you need to set environment variables for authentication. The server supports three methods:
 
 1.  **API Key (Preferred):**
     *   `METABASE_URL`: The URL of your Metabase instance (e.g., `https://your-metabase-instance.com`).
     *   `METABASE_API_KEY`: Your Metabase API key.
 
-2.  **Username/Password (Fallback):**
+2.  **Session Token / Google SSO:**
+    *   `METABASE_URL`: The URL of your Metabase instance.
+    *   `METABASE_SESSION_TOKEN`: A Metabase session token. Use this when your organisation enforces SSO (e.g. Google OAuth) and a standalone API key does not work. After completing the Google OAuth flow in your browser, open the browser's developer tools, go to **Application → Cookies**, and copy the value of the `metabase.SESSION` cookie. Set that value as `METABASE_SESSION_TOKEN`.
+
+3.  **Username/Password (Fallback):**
     *   `METABASE_URL`: The URL of your Metabase instance.
     *   `METABASE_USERNAME`: Your Metabase username.
     *   `METABASE_PASSWORD`: Your Metabase password.
 
-The server will first check for `METABASE_API_KEY`. If it's set, API key authentication will be used. If `METABASE_API_KEY` is not set, the server will fall back to using `METABASE_USERNAME` and `METABASE_PASSWORD`. You must provide credentials for at least one of these methods.
+The server checks for credentials in the following order: `METABASE_API_KEY`, then `METABASE_SESSION_TOKEN`, then `METABASE_USERNAME`/`METABASE_PASSWORD`. You must provide credentials for at least one method.
 
 **Example setup:**
 
@@ -49,6 +53,13 @@ Using API Key:
 # Required environment variables
 export METABASE_URL=https://your-metabase-instance.com
 export METABASE_API_KEY=your_metabase_api_key
+```
+
+Using a session token (Google SSO / OAuth):
+```bash
+# Required environment variables
+export METABASE_URL=https://your-metabase-instance.com
+export METABASE_SESSION_TOKEN=your_session_token_from_browser_cookie
 ```
 
 Or, using Username/Password:
@@ -97,7 +108,9 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
         "METABASE_URL": "https://your-metabase-instance.com",
         // Use API Key (preferred)
         "METABASE_API_KEY": "your_metabase_api_key"
-        // Or Username/Password (if API Key is not set)
+        // Or Session Token from Google SSO
+        // "METABASE_SESSION_TOKEN": "your_session_token_from_browser_cookie"
+        // Or Username/Password (if neither API Key nor Session Token is set)
         // "METABASE_USERNAME": "your_username",
         // "METABASE_PASSWORD": "your_password"
       }
@@ -192,26 +205,41 @@ After configuring the environment variables as described in the "Configuration" 
 5.  Using an MCP client or the MCP Inspector, try calling a tool, for example, `tools/call` with `{"name": "list_dashboards"}`.
 6.  Verify that the tool call is successful and you receive the expected data.
 
-### 2. Testing with Username/Password Authentication (Fallback)
+### 2. Testing with Session Token Authentication (Google SSO / OAuth)
 
 1.  Ensure the `METABASE_API_KEY` environment variable is unset.
+2.  Complete the Google OAuth flow in your browser by navigating to your Metabase instance and signing in.
+3.  Open the browser's developer tools (F12), go to **Application → Cookies**, select your Metabase instance URL, and copy the value of the `metabase.SESSION` cookie.
+4.  Set `METABASE_URL` and `METABASE_SESSION_TOKEN` (the copied cookie value).
+5.  Start the server.
+6.  Check the server logs. You should see "Using Metabase session token for authentication (e.g. obtained via Google SSO).".
+7.  Using an MCP client or the MCP Inspector, try calling the `list_dashboards` tool.
+8.  Verify that the tool call is successful.
+
+### 3. Testing with Username/Password Authentication (Fallback)
+
+1.  Ensure both `METABASE_API_KEY` and `METABASE_SESSION_TOKEN` environment variables are unset.
 2.  Set `METABASE_URL`, `METABASE_USERNAME`, and `METABASE_PASSWORD` with valid credentials for your Metabase instance.
 3.  Start the server.
 4.  Check the server logs. You should see a message indicating that it's using username/password authentication (e.g., "Using Metabase username/password for authentication." followed by "Authenticating with Metabase using username/password...").
 5.  Using an MCP client or the MCP Inspector, try calling the `list_dashboards` tool.
 6.  Verify that the tool call is successful.
 
-### 3. Testing Authentication Failures
+### 4. Testing Authentication Failures
 
 *   **Invalid API Key:**
-    1.  Set `METABASE_URL` and an invalid `METABASE_API_KEY`. Ensure `METABASE_USERNAME` and `METABASE_PASSWORD` variables are unset.
+    1.  Set `METABASE_URL` and an invalid `METABASE_API_KEY`. Ensure `METABASE_USERNAME`, `METABASE_PASSWORD`, and `METABASE_SESSION_TOKEN` variables are unset.
     2.  Start the server.
     3.  Attempt to call a tool (e.g., `list_dashboards`). The tool call should fail, and the server logs might indicate an authentication error from Metabase (e.g., "Metabase API error: Invalid X-API-Key").
+*   **Invalid Session Token:**
+    1.  Ensure `METABASE_API_KEY` is unset. Set `METABASE_URL` and an invalid `METABASE_SESSION_TOKEN`.
+    2.  Start the server.
+    3.  Attempt to call a tool. The tool call should fail with an authentication error from Metabase.
 *   **Invalid Username/Password:**
-    1.  Ensure `METABASE_API_KEY` is unset. Set `METABASE_URL` and invalid `METABASE_USERNAME`/`METABASE_PASSWORD`.
+    1.  Ensure `METABASE_API_KEY` and `METABASE_SESSION_TOKEN` are unset. Set `METABASE_URL` and invalid `METABASE_USERNAME`/`METABASE_PASSWORD`.
     2.  Start the server.
     3.  Attempt to call a tool. The tool call should fail due to failed session authentication. The server logs might show "Authentication failed" or "Failed to authenticate with Metabase".
 *   **Missing Credentials:**
-    1.  Unset `METABASE_API_KEY`, `METABASE_USERNAME`, and `METABASE_PASSWORD`. Set only `METABASE_URL`.
+    1.  Unset `METABASE_API_KEY`, `METABASE_SESSION_TOKEN`, `METABASE_USERNAME`, and `METABASE_PASSWORD`. Set only `METABASE_URL`.
     2.  Attempt to start the server.
-    3.  The server should fail to start and log an error message stating that authentication credentials (either API key or username/password) are required (e.g., "Either (METABASE_URL and METABASE_API_KEY) or (METABASE_URL, METABASE_USERNAME, and METABASE_PASSWORD) environment variables are required").
+    3.  The server should fail to start and log an error message stating that authentication credentials are required (e.g., "Either (METABASE_URL and METABASE_API_KEY) or (METABASE_URL and METABASE_SESSION_TOKEN) or (METABASE_URL, METABASE_USERNAME, and METABASE_PASSWORD) environment variables are required").
