@@ -63,6 +63,7 @@ const METABASE_USERNAME = process.env.METABASE_USERNAME;
 const METABASE_PASSWORD = process.env.METABASE_PASSWORD;
 const METABASE_API_KEY = process.env.METABASE_API_KEY;
 const METABASE_SESSION_TOKEN = process.env.METABASE_SESSION_TOKEN;
+const METABASE_FORWARD_AUTH = process.env.METABASE_FORWARD_AUTH;
 
 if (!METABASE_URL || (!METABASE_API_KEY && !METABASE_SESSION_TOKEN && (!METABASE_USERNAME || !METABASE_PASSWORD))) {
   throw new Error(
@@ -112,10 +113,14 @@ class MetabaseServer {
       this.sessionToken = "api_key_used"; // Indicate API key is in use
     } else if (METABASE_SESSION_TOKEN) {
       this.logInfo('Using Metabase session token for authentication (e.g. obtained via Google SSO).');
-      this.axiosInstance.defaults.headers.common['X-Metabase-Session'] = METABASE_SESSION_TOKEN;
+      this.axiosInstance.defaults.headers.common['Cookie'] = this.buildCookieHeader(METABASE_SESSION_TOKEN);
       this.sessionToken = METABASE_SESSION_TOKEN;
     } else if (METABASE_USERNAME && METABASE_PASSWORD) {
       this.logInfo('Using Metabase username/password for authentication.');
+      // Set the _forward_auth cookie now so the /api/session call goes through the proxy
+      if (METABASE_FORWARD_AUTH) {
+        this.axiosInstance.defaults.headers.common['Cookie'] = this.buildCookieHeader();
+      }
       // Existing session token logic will apply
     } else {
       // This case should ideally be caught by the initial environment variable check
@@ -178,6 +183,20 @@ class MetabaseServer {
   }
 
   /**
+   * Build the Cookie header value combining _forward_auth and metabase.SESSION cookies
+   */
+  private buildCookieHeader(sessionToken?: string): string {
+    const cookies: string[] = [];
+    if (METABASE_FORWARD_AUTH) {
+      cookies.push(`_forward_auth=${METABASE_FORWARD_AUTH}`);
+    }
+    if (sessionToken) {
+      cookies.push(`metabase.SESSION=${sessionToken}`);
+    }
+    return cookies.join('; ');
+  }
+
+  /**
    * Get the Metabase session token
    */
   private async getSessionToken(): Promise<string> {
@@ -195,8 +214,8 @@ class MetabaseServer {
 
       this.sessionToken = response.data.id;
       
-      // Set default request headers
-      this.axiosInstance.defaults.headers.common['X-Metabase-Session'] = this.sessionToken;
+      // Set cookie-based authentication for subsequent requests
+      this.axiosInstance.defaults.headers.common['Cookie'] = this.buildCookieHeader(this.sessionToken as string);
       
       this.logInfo('Successfully authenticated with Metabase');
       return this.sessionToken as string;
