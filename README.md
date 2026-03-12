@@ -34,6 +34,7 @@ Before running the server, you need to set environment variables for authenticat
 2.  **Session Token / Google SSO:**
     *   `METABASE_URL`: The URL of your Metabase instance.
     *   `METABASE_SESSION_TOKEN`: A Metabase session token. Use this when your organisation enforces SSO (e.g. Google OAuth) and a standalone API key does not work. After completing the Google OAuth flow in your browser, open the browser's developer tools, go to **Application → Cookies**, and copy the value of the `metabase.SESSION` cookie. Set that value as `METABASE_SESSION_TOKEN`.
+    *   `METABASE_FORWARD_AUTH` *(optional)*: If your Metabase instance sits behind a forward-auth proxy (e.g. Traefik ForwardAuth), you may also need to pass the `_forward_auth` cookie. Copy its value from the browser's developer tools (**Application → Cookies**) and set it as `METABASE_FORWARD_AUTH`. When set, this cookie is sent alongside `metabase.SESSION` on every request.
 
 3.  **Username/Password (Fallback):**
     *   `METABASE_URL`: The URL of your Metabase instance.
@@ -56,6 +57,8 @@ Using a session token (Google SSO / OAuth):
 # Required environment variables
 export METABASE_URL=https://your-metabase-instance.com
 export METABASE_SESSION_TOKEN=your_session_token_from_browser_cookie
+# Optional: required when Metabase is behind a forward-auth proxy
+export METABASE_FORWARD_AUTH=your_forward_auth_cookie_value
 ```
 
 Or, using Username/Password:
@@ -266,10 +269,11 @@ After configuring the environment variables as described in the "Configuration" 
 2.  Complete the Google OAuth flow in your browser by navigating to your Metabase instance and signing in.
 3.  Open the browser's developer tools (F12), go to **Application → Cookies**, select your Metabase instance URL, and copy the value of the `metabase.SESSION` cookie.
 4.  Set `METABASE_URL` and `METABASE_SESSION_TOKEN` (the copied cookie value).
-5.  Start the server.
-6.  Check the server logs. You should see "Using Metabase session token for authentication (e.g. obtained via Google SSO).".
-7.  Using an MCP client or the MCP Inspector, try calling the `list_dashboards` tool.
-8.  Verify that the tool call is successful.
+5.  If your Metabase instance is behind a forward-auth proxy, also copy the `_forward_auth` cookie and set `METABASE_FORWARD_AUTH` to that value.
+6.  Start the server.
+7.  Check the server logs. You should see "Using Metabase session token for authentication (e.g. obtained via Google SSO).".
+8.  Using an MCP client or the MCP Inspector, try calling the `list_dashboards` tool.
+9.  Verify that the tool call is successful.
 
 ### 3. Testing with Username/Password Authentication (Fallback)
 
