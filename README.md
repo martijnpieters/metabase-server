@@ -1,8 +1,4 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/imlewc-metabase-server-badge.png)](https://mseep.ai/app/imlewc-metabase-server)
-
 # metabase-server MCP Server
-
-[![smithery badge](https://smithery.ai/badge/@imlewc/metabase-server)](https://smithery.ai/server/@imlewc/metabase-server)
 
 A Model Context Protocol server for Metabase integration.
 
@@ -89,15 +85,82 @@ npm run watch
 ```
 
 ## Installation
+
+### Option 1: Run directly from GitHub (no installation required)
+
+You can run the server directly from this GitHub repository using `npx`. npm will
+download the source, install dependencies, build it, and run it automatically:
+
 ```bash
-# Oneliner, suitable for CI environment
-git clone https://github.com/imlewc/metabase-server.git && cd metabase-server && npm i && npm run build && npm link
+npx -y github:martijnpieters/metabase-server
 ```
 
 To use with Claude Desktop, add the server config:
 
 On MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "metabase-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:martijnpieters/metabase-server"],
+      "env": {
+        "METABASE_URL": "https://your-metabase-instance.com",
+        "METABASE_API_KEY": "your_metabase_api_key"
+      }
+    }
+  }
+}
+```
+
+Note: On first run `npx` will build the TypeScript source, which takes a little
+extra time. Subsequent runs reuse the cached build.
+
+### Option 2: Install from GitHub Package Registry
+
+The package is published to the [GitHub Package Registry](https://github.com/martijnpieters/metabase-server/pkgs/npm/metabase-server)
+as `@martijnpieters/metabase-server`. To install it you need a GitHub personal
+access token with at least `read:packages` scope.
+
+Authenticate once:
+
+```bash
+npm login --registry=https://npm.pkg.github.com --scope=@martijnpieters
+```
+
+Then install globally:
+
+```bash
+npm install -g @martijnpieters/metabase-server --registry=https://npm.pkg.github.com
+```
+
+To use with Claude Desktop after a global install:
+
+```json
+{
+  "mcpServers": {
+    "metabase-server": {
+      "command": "metabase-server",
+      "env": {
+        "METABASE_URL": "https://your-metabase-instance.com",
+        "METABASE_API_KEY": "your_metabase_api_key"
+      }
+    }
+  }
+}
+```
+
+### Option 3: Build from source
+
+```bash
+# Clone, build, and link globally
+git clone https://github.com/martijnpieters/metabase-server.git && cd metabase-server && npm i && npm run build && npm link
+```
+
+To use with Claude Desktop after linking:
 
 ```json
 {
@@ -121,24 +184,16 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
 Note: You can also set these environment variables in your system instead of in the config file if you prefer.
 
-### Installing via Smithery
-
-To install metabase-server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@imlewc/metabase-server):
-
-```bash
-npx -y @smithery/cli install @imlewc/metabase-server --client claude
-```
-
 ### Installing via Claude Code CLI
 
-To install metabase-server for Claude Code CLI:
+To install metabase-server for Claude Code CLI (using GitHub directly):
 
 ```bash
 claude mcp add metabase-server -s user \
   -e METABASE_URL="https://your-metabase-instance.com" \
   -e METABASE_USERNAME="your-email@example.com" \
   -e METABASE_PASSWORD="your-password" \
-  -- npx -y @imlewc/metabase-server
+  -- npx -y github:martijnpieters/metabase-server
 ```
 
 Or using API Key (preferred):
@@ -147,7 +202,7 @@ Or using API Key (preferred):
 claude mcp add metabase-server -s user \
   -e METABASE_URL="https://your-metabase-instance.com" \
   -e METABASE_API_KEY="your-api-key" \
-  -- npx -y @imlewc/metabase-server
+  -- npx -y github:martijnpieters/metabase-server
 ```
 
 Configuration will be written to `~/.claude.json`:
@@ -158,7 +213,7 @@ Configuration will be written to `~/.claude.json`:
     "metabase-server": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@imlewc/metabase-server"],
+      "args": ["-y", "github:martijnpieters/metabase-server"],
       "env": {
         "METABASE_URL": "https://your-metabase-instance.com",
         "METABASE_USERNAME": "your-email@example.com",
